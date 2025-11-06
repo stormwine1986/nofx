@@ -32,7 +32,7 @@ type SymbolStats struct {
 }
 
 var WSMonitorCli *WSMonitor
-var subKlineTime = []string{"3m", "4h"} // 管理订阅流的K线周期
+var subKlineTime = []string{"5m", "4h"} // 管理订阅流的K线周期
 
 func NewWSMonitor(batchSize int) *WSMonitor {
 	WSMonitorCli = &WSMonitor{
@@ -97,7 +97,7 @@ func (m *WSMonitor) initializeHistoricalData() error {
 			}
 			if len(klines) > 0 {
 				m.klineDataMap5m.Store(s, klines)
-				log.Printf("已加载 %s 的历史K线数据-3m: %d 条", s, len(klines))
+				log.Printf("已加载 %s 的历史K线数据-5m: %d 条", s, len(klines))
 			}
 			// 获取历史K线数据
 			klines4h, err := apiClient.GetKlines(s, "4h", 100)
