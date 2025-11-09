@@ -42,16 +42,8 @@ func Get(symbol string) (*Data, error) {
 	}
 
 	// 检查数据是否为空
-	if len(klines3m) == 0 {
-		return nil, fmt.Errorf("3分钟K线数据为空")
-	}
-	if len(klines4h) == 0 {
-		return nil, fmt.Errorf("4小时K线数据为空")
-	}
-
-	// 检查数据是否为空
-	if len(klines3m) == 0 {
-		return nil, fmt.Errorf("3分钟K线数据为空")
+	if len(klines5m) == 0 {
+		return nil, fmt.Errorf("5分钟K线数据为空")
 	}
 	if len(klines4h) == 0 {
 		return nil, fmt.Errorf("4小时K线数据为空")
