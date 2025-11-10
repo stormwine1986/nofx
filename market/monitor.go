@@ -107,8 +107,8 @@ func (m *WSMonitor) initializeHistoricalData() error {
 				return
 			}
 			if len(klines1h) > 0 {
-				m.klineDataMap1h.Store(s, klines)
-				log.Printf("已加载 %s 的历史K线数据-1h: %d 条", s, len(klines))
+				m.klineDataMap1h.Store(s, klines1h)
+				log.Printf("已加载 %s 的历史K线数据-1h: %d 条", s, len(klines1h))
 			}
 			// 获取历史K线数据 - 4h
 			klines4h, err := apiClient.GetKlines(s, "4h", 100)
