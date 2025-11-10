@@ -25,7 +25,7 @@ var (
 
 // Get 获取指定代币的市场数据
 func Get(symbol string) (*Data, error) {
-	var klines5m, klines4h []Kline
+	var klines5m, klines1h, klines4h []Kline
 	var err error
 	// 标准化symbol
 	symbol = Normalize(symbol)
@@ -33,6 +33,12 @@ func Get(symbol string) (*Data, error) {
 	klines5m, err = WSMonitorCli.GetCurrentKlines(symbol, "5m") // 多获取一些用于计算
 	if err != nil {
 		return nil, fmt.Errorf("获取5分钟K线失败: %v", err)
+	}
+
+	// 获取1小时K线数据 (最近100个)
+	klines1h, err = WSMonitorCli.GetCurrentKlines(symbol, "1h") // 多获取一些用于计算
+	if err != nil {
+		return nil, fmt.Errorf("获取1小时K线失败: %v", err)
 	}
 
 	// 获取4小时K线数据 (最近100个)
@@ -44,6 +50,9 @@ func Get(symbol string) (*Data, error) {
 	// 检查数据是否为空
 	if len(klines5m) == 0 {
 		return nil, fmt.Errorf("5分钟K线数据为空")
+	}
+	if len(klines1h) == 0 {
+		return nil, fmt.Errorf("1小时K线数据为空")
 	}
 	if len(klines4h) == 0 {
 		return nil, fmt.Errorf("4小时K线数据为空")
@@ -87,6 +96,9 @@ func Get(symbol string) (*Data, error) {
 	// 计算日内系列数据
 	intradayData := calculateIntradaySeries(klines5m)
 
+	// 计算中期数据
+	middleTermData := calculateLongerTermData(klines1h)
+
 	// 计算长期数据
 	longerTermData := calculateLongerTermData(klines4h)
 
@@ -101,6 +113,7 @@ func Get(symbol string) (*Data, error) {
 		OpenInterest:      oiData,
 		FundingRate:       fundingRate,
 		IntradaySeries:    intradayData,
+		MiddleTermContext: middleTermData,
 		LongerTermContext: longerTermData,
 	}, nil
 }
@@ -127,7 +140,7 @@ func calculateEMA(klines []Kline, period int) float64 {
 	return ema
 }
 
-// calculateMACD 计算MACD
+// calculateMACD 计算MACD Histogram
 func calculateMACD(klines []Kline) float64 {
 	if len(klines) < 26 {
 		return 0
@@ -297,6 +310,9 @@ func calculateLongerTermData(klines []Kline) *LongerTermData {
 	}
 
 	for i := start; i < len(klines); i++ {
+		// 价格序列
+		data.MidPrices = append(data.MidPrices, klines[i].Close)
+
 		if i >= 25 {
 			macd := calculateMACD(klines[:i+1])
 			data.MACDValues = append(data.MACDValues, macd)
@@ -425,31 +441,61 @@ func Format(data *Data) string {
 			sb.WriteString(fmt.Sprintf("Mid prices: %s\n\n", formatFloatSlice(data.IntradaySeries.MidPrices)))
 		}
 
-		if len(data.IntradaySeries.EMA20Values) > 0 {
-			sb.WriteString(fmt.Sprintf("EMA indicators (20‑period): %s\n\n", formatFloatSlice(data.IntradaySeries.EMA20Values)))
-		}
+		// if len(data.IntradaySeries.EMA20Values) > 0 {
+		// 	sb.WriteString(fmt.Sprintf("EMA indicators (20‑period): %s\n\n", formatFloatSlice(data.IntradaySeries.EMA20Values)))
+		// }
 
-		if len(data.IntradaySeries.MACDValues) > 0 {
-			sb.WriteString(fmt.Sprintf("MACD indicators: %s\n\n", formatFloatSlice(data.IntradaySeries.MACDValues)))
-		}
+		// if len(data.IntradaySeries.MACDValues) > 0 {
+		// 	sb.WriteString(fmt.Sprintf("MACD indicators: %s\n\n", formatFloatSlice(data.IntradaySeries.MACDValues)))
+		// }
 
 		if len(data.IntradaySeries.RSI7Values) > 0 {
 			sb.WriteString(fmt.Sprintf("RSI indicators (7‑Period): %s\n\n", formatFloatSlice(data.IntradaySeries.RSI7Values)))
 		}
 
-		if len(data.IntradaySeries.RSI14Values) > 0 {
-			sb.WriteString(fmt.Sprintf("RSI indicators (14‑Period): %s\n\n", formatFloatSlice(data.IntradaySeries.RSI14Values)))
+		// if len(data.IntradaySeries.RSI14Values) > 0 {
+		// 	sb.WriteString(fmt.Sprintf("RSI indicators (14‑Period): %s\n\n", formatFloatSlice(data.IntradaySeries.RSI14Values)))
+		// }
+	}
+
+	// 打印中期指标
+	if data.MiddleTermContext != nil {
+		sb.WriteString("Middle‑term context (1‑hour timeframe):\n\n")
+
+		if len(data.MiddleTermContext.MidPrices) > 0 {
+			sb.WriteString(fmt.Sprintf("Mid prices: %s\n\n", formatFloatSlice(data.MiddleTermContext.MidPrices)))
 		}
+
+		sb.WriteString(fmt.Sprintf("20‑Period EMA: %.3f vs. 50‑Period EMA: %.3f\n\n",
+			data.MiddleTermContext.EMA20, data.MiddleTermContext.EMA50))
+
+		sb.WriteString(fmt.Sprintf("3‑Period ATR: %.3f vs. 14‑Period ATR: %.3f\n\n",
+			data.MiddleTermContext.ATR3, data.MiddleTermContext.ATR14))
+
+		// sb.WriteString(fmt.Sprintf("Current Volume: %.3f vs. Average Volume: %.3f\n\n",
+		// 	data.MiddleTermContext.CurrentVolume, data.MiddleTermContext.AverageVolume))
+
+		// if len(data.MiddleTermContext.MACDValues) > 0 {
+		// 	sb.WriteString(fmt.Sprintf("MACD indicators: %s\n\n", formatFloatSlice(data.MiddleTermContext.MACDValues)))
+		// }
+
+		// if len(data.MiddleTermContext.RSI14Values) > 0 {
+		// 	sb.WriteString(fmt.Sprintf("RSI indicators (14‑Period): %s\n\n", formatFloatSlice(data.MiddleTermContext.RSI14Values)))
+		// }
 	}
 
 	if data.LongerTermContext != nil {
 		sb.WriteString("Longer‑term context (4‑hour timeframe):\n\n")
 
+		if len(data.LongerTermContext.MidPrices) > 0 {
+			sb.WriteString(fmt.Sprintf("Mid prices: %s\n\n", formatFloatSlice(data.LongerTermContext.MidPrices)))
+		}
+
 		sb.WriteString(fmt.Sprintf("20‑Period EMA: %.3f vs. 50‑Period EMA: %.3f\n\n",
 			data.LongerTermContext.EMA20, data.LongerTermContext.EMA50))
 
-		sb.WriteString(fmt.Sprintf("3‑Period ATR: %.3f vs. 14‑Period ATR: %.3f\n\n",
-			data.LongerTermContext.ATR3, data.LongerTermContext.ATR14))
+		// sb.WriteString(fmt.Sprintf("3‑Period ATR: %.3f vs. 14‑Period ATR: %.3f\n\n",
+		// 	data.LongerTermContext.ATR3, data.LongerTermContext.ATR14))
 
 		sb.WriteString(fmt.Sprintf("Current Volume: %.3f vs. Average Volume: %.3f\n\n",
 			data.LongerTermContext.CurrentVolume, data.LongerTermContext.AverageVolume))

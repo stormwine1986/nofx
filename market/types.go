@@ -13,8 +13,9 @@ type Data struct {
 	CurrentRSI7       float64
 	OpenInterest      *OIData
 	FundingRate       float64
-	IntradaySeries    *IntradayData
-	LongerTermContext *LongerTermData
+	IntradaySeries    *IntradayData   // 短期指标
+	MiddleTermContext *LongerTermData // 中期指标
+	LongerTermContext *LongerTermData // 长期指标
 }
 
 // OIData Open Interest数据
@@ -34,6 +35,7 @@ type IntradayData struct {
 
 // LongerTermData 长期数据(4小时时间框架)
 type LongerTermData struct {
+	MidPrices     []float64
 	EMA20         float64
 	EMA50         float64
 	ATR3          float64

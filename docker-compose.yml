@@ -7,7 +7,7 @@ services:
     container_name: nofx-trading
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     volumes:
       - ./config.json:/app/config.json:ro
       - ./config.db:/app/config.db
@@ -38,7 +38,7 @@ services:
     container_name: nofx-frontend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:80"
+      - "3000:80"
     networks:
       - nofx-network
     depends_on:
