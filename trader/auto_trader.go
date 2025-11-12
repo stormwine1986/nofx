@@ -1185,6 +1185,37 @@ func (at *AutoTrader) executePartialCloseWithRecord(decision *decision.Decision,
 	closeQuantity := totalQuantity * (decision.ClosePercentage / 100.0)
 	actionRecord.Quantity = closeQuantity
 
+	// ✅ Layer 2: 最小仓位检查（防止产生小额剩余）
+	markPrice, ok := targetPosition["markPrice"].(float64)
+	if !ok || markPrice <= 0 {
+		return fmt.Errorf("无法解析当前价格，无法执行最小仓位检查")
+	}
+
+	currentPositionValue := totalQuantity * markPrice
+	remainingQuantity := totalQuantity - closeQuantity
+	remainingValue := remainingQuantity * markPrice
+
+	const MIN_POSITION_VALUE = 10.0 // 最小持仓价值 10 USDT（對齊交易所底线，小仓位建议直接全平）
+
+	if remainingValue > 0 && remainingValue <= MIN_POSITION_VALUE {
+		log.Printf("⚠️ 检测到 partial_close 后剩余仓位 %.2f USDT < %.0f USDT",
+			remainingValue, MIN_POSITION_VALUE)
+		log.Printf("  → 当前仓位价值: %.2f USDT, 平仓 %.1f%%, 剩余: %.2f USDT",
+			currentPositionValue, decision.ClosePercentage, remainingValue)
+		log.Printf("  → 自动修正为全部平仓，避免产生无法平仓的小额剩余")
+
+		// 🔄 自动修正为全部平仓
+		if positionSide == "LONG" {
+			decision.Action = "close_long"
+			log.Printf("  ✓ 已修正为: close_long")
+			return at.executeCloseLongWithRecord(decision, actionRecord)
+		} else {
+			decision.Action = "close_short"
+			log.Printf("  ✓ 已修正为: close_short")
+			return at.executeCloseShortWithRecord(decision, actionRecord)
+		}
+	}
+
 	// 执行平仓
 	var order map[string]interface{}
 	if positionSide == "LONG" {
@@ -1202,9 +1233,34 @@ func (at *AutoTrader) executePartialCloseWithRecord(decision *decision.Decision,
 		actionRecord.OrderID = orderID
 	}
 
-	remainingQuantity := totalQuantity - closeQuantity
 	log.Printf("  ✓ 部分平仓成功: 平仓 %.4f (%.1f%%), 剩余 %.4f",
 		closeQuantity, decision.ClosePercentage, remainingQuantity)
+
+	// ✅ Step 4: 恢复止盈止损（防止剩余仓位裸奔）
+	// 重要：币安等交易所在部分平仓后会自动取消原有的 TP/SL 订单（因为数量不匹配）
+	// 如果 AI 提供了新的止损止盈价格，则为剩余仓位重新设置保护
+	if decision.NewStopLoss > 0 {
+		log.Printf("  → 为剩余仓位 %.4f 恢复止损单: %.2f", remainingQuantity, decision.NewStopLoss)
+		err = at.trader.SetStopLoss(decision.Symbol, positionSide, remainingQuantity, decision.NewStopLoss)
+		if err != nil {
+			log.Printf("  ⚠️ 恢复止损失败: %v（不影响平仓结果）", err)
+		}
+	}
+
+	if decision.NewTakeProfit > 0 {
+		log.Printf("  → 为剩余仓位 %.4f 恢复止盈单: %.2f", remainingQuantity, decision.NewTakeProfit)
+		err = at.trader.SetTakeProfit(decision.Symbol, positionSide, remainingQuantity, decision.NewTakeProfit)
+		if err != nil {
+			log.Printf("  ⚠️ 恢复止盈失败: %v（不影响平仓结果）", err)
+		}
+	}
+
+	// 如果 AI 没有提供新的止盈止损，记录警告
+	if decision.NewStopLoss <= 0 && decision.NewTakeProfit <= 0 {
+		log.Printf("  ⚠️⚠️⚠️ 警告: 部分平仓后AI未提供新的止盈止损价格")
+		log.Printf("  → 剩余仓位 %.4f (价值 %.2f USDT) 目前没有止盈止损保护", remainingQuantity, remainingValue)
+		log.Printf("  → 建议: 在 partial_close 决策中包含 new_stop_loss 和 new_take_profit 字段")
+	}
 
 	return nil
 }
