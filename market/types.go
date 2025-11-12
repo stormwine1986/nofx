@@ -30,6 +30,8 @@ type IntradayData struct {
 	EMA20Values []float64
 	MACDValues  []float64
 	RSI7Values  []float64
+	Volume      []float64
+	ATR14       float64
 	// RSI14Values []float64
 }
 

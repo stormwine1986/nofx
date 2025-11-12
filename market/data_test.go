@@ -284,17 +284,17 @@ func TestCalculateIntradaySeries_ConsistencyWithOtherIndicators(t *testing.T) {
 	data := calculateIntradaySeries(klines)
 
 	// 所有数组应该存在
-	if data.MidPrices == nil {
-		t.Error("MidPrices should not be nil")
+	if data.ClosePrices == nil {
+		t.Error("ClosePrices should not be nil")
 	}
 	if data.Volume == nil {
 		t.Error("Volume should not be nil")
 	}
 
 	// MidPrices 和 Volume 应该有相同的长度（都是最近10个）
-	if len(data.MidPrices) != len(data.Volume) {
-		t.Errorf("MidPrices length (%d) should equal Volume length (%d)",
-			len(data.MidPrices), len(data.Volume))
+	if len(data.ClosePrices) != len(data.Volume) {
+		t.Errorf("ClosePrices length (%d) should equal Volume length (%d)",
+			len(data.ClosePrices), len(data.Volume))
 	}
 
 	// 所有 Volume 值应该大于 0
@@ -315,8 +315,8 @@ func TestCalculateIntradaySeries_EmptyKlines(t *testing.T) {
 	}
 
 	// 所有切片应该为空
-	if len(data.MidPrices) != 0 {
-		t.Errorf("MidPrices length = %d, want 0", len(data.MidPrices))
+	if len(data.ClosePrices) != 0 {
+		t.Errorf("ClosePrices length = %d, want 0", len(data.ClosePrices))
 	}
 	if len(data.Volume) != 0 {
 		t.Errorf("Volume length = %d, want 0", len(data.Volume))
