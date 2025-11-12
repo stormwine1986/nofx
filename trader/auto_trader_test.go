@@ -1086,6 +1086,11 @@ func (m *MockTrader) FormatQuantity(symbol string, quantity float64) (string, er
 	return fmt.Sprintf("%.4f", quantity), nil
 }
 
+func (t *MockTrader) GetHistoryFilledOrders() ([]map[string]interface{}, error) {
+	// TODO
+	return nil, nil
+}
+
 // ============================================================
 // 测试套件入口
 // ============================================================

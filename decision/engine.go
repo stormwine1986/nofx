@@ -72,17 +72,18 @@ type OITopData struct {
 
 // Context 交易上下文（传递给AI的完整信息）
 type Context struct {
-	CurrentTime     string                  `json:"current_time"`
-	RuntimeMinutes  int                     `json:"runtime_minutes"`
-	CallCount       int                     `json:"call_count"`
-	Account         AccountInfo             `json:"account"`
-	Positions       []PositionInfo          `json:"positions"`
-	CandidateCoins  []CandidateCoin         `json:"candidate_coins"`
-	MarketDataMap   map[string]*market.Data `json:"-"` // 不序列化，但内部使用
-	OITopDataMap    map[string]*OITopData   `json:"-"` // OI Top数据映射
-	Performance     interface{}             `json:"-"` // 历史表现分析（logger.PerformanceAnalysis）
-	BTCETHLeverage  int                     `json:"-"` // BTC/ETH杠杆倍数（从配置读取）
-	AltcoinLeverage int                     `json:"-"` // 山寨币杠杆倍数（从配置读取）
+	CurrentTime         string                   `json:"current_time"`
+	RuntimeMinutes      int                      `json:"runtime_minutes"`
+	CallCount           int                      `json:"call_count"`
+	Account             AccountInfo              `json:"account"`
+	Positions           []PositionInfo           `json:"positions"`
+	CandidateCoins      []CandidateCoin          `json:"candidate_coins"`
+	MarketDataMap       map[string]*market.Data  `json:"-"` // 不序列化，但内部使用
+	OITopDataMap        map[string]*OITopData    `json:"-"` // OI Top数据映射
+	Performance         interface{}              `json:"-"` // 历史表现分析（logger.PerformanceAnalysis）
+	BTCETHLeverage      int                      `json:"-"` // BTC/ETH杠杆倍数（从配置读取）
+	AltcoinLeverage     int                      `json:"-"` // 山寨币杠杆倍数（从配置读取）
+	HistoryFilledOrders []map[string]interface{} `json:"-"`
 }
 
 // Decision AI的交易决策
@@ -363,11 +364,26 @@ func buildUserPrompt(ctx *Context) string {
 	sb.WriteString(fmt.Sprintf("时间: %s | 周期: #%d | 运行: %d分钟\n\n",
 		ctx.CurrentTime, ctx.CallCount, ctx.RuntimeMinutes))
 
+	// 历史订单数据
+	if ctx.HistoryFilledOrders != nil {
+		sb.WriteString("## 最近4个小时的已完成订单\n")
+		for _, order := range ctx.HistoryFilledOrders {
+			sb.WriteString(
+				fmt.Sprintf("%s | %s %s | %s | 成交时间：%s \n",
+					order["symbol"],
+					order["side"],
+					order["positionSide"],
+					order["origType"],
+					order["updateTime"],
+				))
+		}
+		sb.WriteString("\n")
+	}
+
 	// BTC 市场
 	if btcData, hasBTC := ctx.MarketDataMap["BTCUSDT"]; hasBTC {
-		sb.WriteString(fmt.Sprintf("BTC: %.2f (1h: %+.2f%%, 4h: %+.2f%%) | MACD: %.4f | RSI: %.2f\n\n",
-			btcData.CurrentPrice, btcData.PriceChange1h, btcData.PriceChange4h,
-			btcData.CurrentMACD, btcData.CurrentRSI7))
+		sb.WriteString(fmt.Sprintf("BTC: %.2f (1h: %+.2f%%, 4h: %+.2f%%)\n\n",
+			btcData.CurrentPrice, btcData.PriceChange1h, btcData.PriceChange4h))
 	}
 
 	// 账户

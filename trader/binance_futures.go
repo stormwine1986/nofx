@@ -215,6 +215,43 @@ func (t *FuturesTrader) GetPositions() ([]map[string]interface{}, error) {
 	return result, nil
 }
 
+func (t *FuturesTrader) GetHistoryFilledOrders() ([]map[string]interface{}, error) {
+	// 获取当前时间
+	endTime := time.Now()
+	// 计算4小时前的时间
+	startTime := endTime.Add(-4 * time.Hour)
+
+	log.Printf("🔄 正在调用币安API获取最近4小时的订单历史 (从 %s 到 %s)...",
+		startTime.Format("2006-01-02 15:04:05"), endTime.Format("2006-01-02 15:04:05"))
+
+	// 调用API获取订单历史
+	orders, err := t.client.NewListOrdersService().
+		StartTime(startTime.UnixMilli()).
+		EndTime(endTime.UnixMilli()).
+		Do(context.Background())
+	if err != nil {
+		log.Printf("❌ 币安API调用失败: %v", err)
+		return nil, fmt.Errorf("获取订单历史失败: %w", err)
+	}
+
+	var result []map[string]interface{}
+	for _, order := range orders {
+		if order.Status == "FILLED" {
+			orderMap := make(map[string]interface{})
+			orderMap["symbol"] = order.Symbol
+			orderMap["side"] = order.Side
+			orderMap["positionSide"] = order.PositionSide
+			orderMap["origType"] = order.OrigType
+			orderMap["updateTime"] = time.UnixMilli(order.UpdateTime).Format(time.RFC3339)
+
+			result = append(result, orderMap)
+		}
+	}
+
+	log.Printf("✓ 成功获取 %d 条订单历史记录", len(result))
+	return result, nil
+}
+
 // SetMarginMode 设置仓位模式
 func (t *FuturesTrader) SetMarginMode(symbol string, isCrossMargin bool) error {
 	var marginType futures.MarginType

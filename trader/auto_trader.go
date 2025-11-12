@@ -725,6 +725,11 @@ func (at *AutoTrader) buildTradingContext() (*decision.Context, error) {
 		Performance:    performance, // 添加历史表现分析
 	}
 
+	// 7. 获取最近4小时的订单快照
+	if ctx.HistoryFilledOrders, err = at.trader.GetHistoryFilledOrders(); err != nil {
+		log.Printf("⚠ 获取最近4小时完成的订单快照失败: %v", err)
+	}
+
 	return ctx, nil
 }
 

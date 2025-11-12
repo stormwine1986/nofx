@@ -50,4 +50,6 @@ type Trader interface {
 
 	// FormatQuantity 格式化数量到正确的精度
 	FormatQuantity(symbol string, quantity float64) (string, error)
+
+	GetHistoryFilledOrders() ([]map[string]interface{}, error)
 }

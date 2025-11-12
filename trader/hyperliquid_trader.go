@@ -904,3 +904,8 @@ func absFloat(x float64) float64 {
 	}
 	return x
 }
+
+func (t *HyperliquidTrader) GetHistoryFilledOrders() ([]map[string]interface{}, error) {
+	// TODO
+	return nil, nil
+}

@@ -1230,3 +1230,8 @@ func (t *AsterTrader) FormatQuantity(symbol string, quantity float64) (string, e
 	}
 	return fmt.Sprintf("%v", formatted), nil
 }
+
+func (t *AsterTrader) GetHistoryFilledOrders() ([]map[string]interface{}, error) {
+	// TODO
+	return nil, nil
+}
