@@ -413,7 +413,7 @@ func (at *AutoTrader) runCycle() error {
 	}
 
 	// 3. 自动同步余额（每10分钟检查一次，充值/提现后自动更新）
-	at.autoSyncBalanceIfNeeded()
+	// at.autoSyncBalanceIfNeeded()
 
 	// 4. 收集交易上下文
 	ctx, err := at.buildTradingContext()
