@@ -371,20 +371,20 @@ func buildUserPrompt(ctx *Context) string {
 		ctx.CurrentTime, ctx.CallCount, ctx.RuntimeMinutes))
 
 	// 历史订单数据
-	if ctx.HistoryFilledOrders != nil {
-		sb.WriteString("## 最近4个小时的已完成订单\n")
-		for _, order := range ctx.HistoryFilledOrders {
-			sb.WriteString(
-				fmt.Sprintf("%s | %s %s | %s | 成交时间：%s \n",
-					order["symbol"],
-					order["side"],
-					order["positionSide"],
-					order["origType"],
-					order["updateTime"],
-				))
-		}
-		sb.WriteString("\n")
-	}
+	// if ctx.HistoryFilledOrders != nil {
+	// 	sb.WriteString("## 最近4个小时的已完成订单\n")
+	// 	for _, order := range ctx.HistoryFilledOrders {
+	// 		sb.WriteString(
+	// 			fmt.Sprintf("%s | %s %s | %s | 成交时间：%s \n",
+	// 				order["symbol"],
+	// 				order["side"],
+	// 				order["positionSide"],
+	// 				order["origType"],
+	// 				order["updateTime"],
+	// 			))
+	// 	}
+	// 	sb.WriteString("\n")
+	// }
 
 	// BTC 市场
 	if btcData, hasBTC := ctx.MarketDataMap["BTCUSDT"]; hasBTC {

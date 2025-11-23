@@ -28,8 +28,9 @@ type OIData struct {
 type IntradayData struct {
 	ClosePrices []float64
 	EMA20Values []float64
+	EMA50Values []float64
 	MACDValues  []float64
-	RSI7Values  []float64
+	RSI14Values []float64
 	Volume      []float64
 	ATR14       float64
 	// RSI14Values []float64

@@ -257,8 +257,12 @@ func calculateIntradaySeries(klines []Kline) *IntradayData {
 		closes[i] = k.Close
 	}
 
-	// RSI_7
-	rsi7 := talib.Rsi(closes, 7)
+	// RSI_14
+	rsi14 := talib.Rsi(closes, 14)
+
+	// EMA_20
+	ema20 := talib.Ema(closes, 20)
+	ema50 := talib.Ema(closes, 50)
 
 	// 获取最近10个数据点
 	// start := len(klines) - 10
@@ -294,7 +298,9 @@ func calculateIntradaySeries(klines []Kline) *IntradayData {
 
 	return &IntradayData{
 		ClosePrices: closes,
-		RSI7Values:  rsi7,
+		RSI14Values: rsi14,
+		EMA20Values: ema20,
+		EMA50Values: ema50,
 	}
 }
 
@@ -490,17 +496,23 @@ func Format(data *Data) string {
 				formatFloatSlice(data.IntradaySeries.ClosePrices[startIndex:endIndex])))
 		}
 
-		// if len(data.IntradaySeries.EMA20Values) > 0 {
-		// 	sb.WriteString(fmt.Sprintf("EMA indicators (20‑period): %s\n\n", formatFloatSlice(data.IntradaySeries.EMA20Values)))
-		// }
+		if len(data.IntradaySeries.EMA20Values) > 0 {
+			sb.WriteString(fmt.Sprintf("EMA indicators (20‑period): %s\n\n",
+				formatFloatSlice(data.IntradaySeries.EMA20Values[startIndex:endIndex])))
+		}
+
+		if len(data.IntradaySeries.EMA50Values) > 0 {
+			sb.WriteString(fmt.Sprintf("EMA indicators (50‑period): %s\n\n",
+				formatFloatSlice(data.IntradaySeries.EMA50Values[startIndex:endIndex])))
+		}
 
 		// if len(data.IntradaySeries.MACDValues) > 0 {
 		// 	sb.WriteString(fmt.Sprintf("MACD indicators: %s\n\n", formatFloatSlice(data.IntradaySeries.MACDValues)))
 		// }
 
-		if len(data.IntradaySeries.RSI7Values) > 0 {
-			sb.WriteString(fmt.Sprintf("RSI indicators (7‑Period): %s\n\n",
-				formatFloatSlice(data.IntradaySeries.RSI7Values[startIndex:endIndex])))
+		if len(data.IntradaySeries.RSI14Values) > 0 {
+			sb.WriteString(fmt.Sprintf("RSI indicators (14‑Period): %s\n\n",
+				formatFloatSlice(data.IntradaySeries.RSI14Values[startIndex:endIndex])))
 		}
 
 		// if len(data.IntradaySeries.RSI14Values) > 0 {
