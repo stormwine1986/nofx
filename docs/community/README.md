@@ -34,7 +34,7 @@ We're introducing a new PR management system to improve code quality and make co
 
 3. **Join the Community**
    - 💬 [Telegram Developer Community](https://t.me/nofx_dev_community)
-   - 🐦 [Twitter @nofx_ai](https://x.com/nofx_ai)
+   - 🐦 [Twitter @nofx_official](https://x.com/nofx_official)
    - 🐙 [GitHub Discussions](https://github.com/tinkle-community/nofx/discussions)
 
 ---
@@ -140,12 +140,12 @@ NOFX offers bounties for valuable contributions:
 |----------|---------|------|
 | 💬 Telegram | Real-time chat, questions | [Join](https://t.me/nofx_dev_community) |
 | 🐙 GitHub | Issues, PRs, discussions | [Visit](https://github.com/tinkle-community/nofx) |
-| 🐦 Twitter | Announcements, updates | [@nofx_ai](https://x.com/nofx_ai) |
+| 🐦 Twitter | Announcements, updates | [@nofx_official](https://x.com/nofx_official) |
 
 ### Core Team
 
 - **Tinkle** - [@Web3Tinkle](https://x.com/Web3Tinkle)
-- **Zack** - [@0x_ZackH](https://x.com/0x_ZackH)
+- **Tintin** - [@Tintinx2021](https://x.com/Tintinx2021)
 
 **Contact:**
 - Technical questions → Telegram or GitHub Issues
@@ -167,7 +167,7 @@ NOFX offers bounties for valuable contributions:
 **Want to organize an event?**
 - Contact core team on Telegram
 - Propose in GitHub Discussions
-- Tweet and tag @nofx_ai
+- Tweet and tag @nofx_official
 
 ---
 

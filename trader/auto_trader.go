@@ -23,7 +23,7 @@ type AutoTraderConfig struct {
 	AIModel string // AI模型: "qwen" 或 "deepseek"
 
 	// 交易平台选择
-	Exchange string // "binance", "hyperliquid" 或 "aster"
+	Exchange string // "binance", "hyperliquid", "aster" 或 "lighter"
 
 	// 币安API配置
 	BinanceAPIKey    string
@@ -38,6 +38,12 @@ type AutoTraderConfig struct {
 	AsterUser       string // Aster主钱包地址
 	AsterSigner     string // Aster API钱包地址
 	AsterPrivateKey string // Aster API钱包私钥
+
+	// LIGHTER配置
+	LighterWalletAddr       string // LIGHTER钱包地址（L1 wallet）
+	LighterPrivateKey       string // LIGHTER L1私钥（用于识别账户）
+	LighterAPIKeyPrivateKey string // LIGHTER API Key私钥（40字节，用于签名交易）
+	LighterTestnet          bool   // 是否使用testnet
 
 	CoinPoolAPIURL string
 
@@ -85,8 +91,8 @@ type AutoTrader struct {
 	exchange              string // 交易平台名称
 	config                AutoTraderConfig
 	trader                Trader // 使用Trader接口（支持多平台）
-	mcpClient             *mcp.Client
-	decisionLogger        *logger.DecisionLogger // 决策日志记录器
+	mcpClient             mcp.AIClient
+	decisionLogger        logger.IDecisionLogger // 决策日志记录器
 	initialBalance        float64
 	dailyPnL              float64
 	customPrompt          string   // 自定义交易策略prompt
@@ -131,11 +137,12 @@ func NewAutoTrader(config AutoTraderConfig, database interface{}, userID string)
 	// 初始化AI
 	if config.AIModel == "custom" {
 		// 使用自定义API
-		mcpClient.SetCustomAPI(config.CustomAPIURL, config.CustomAPIKey, config.CustomModelName)
+		mcpClient.SetAPIKey(config.CustomAPIKey, config.CustomAPIURL, config.CustomModelName)
 		log.Printf("🤖 [%s] 使用自定义AI API: %s (模型: %s)", config.Name, config.CustomAPIURL, config.CustomModelName)
 	} else if config.UseQwen || config.AIModel == "qwen" {
 		// 使用Qwen (支持自定义URL和Model)
-		mcpClient.SetQwenAPIKey(config.QwenKey, config.CustomAPIURL, config.CustomModelName)
+		mcpClient = mcp.NewQwenClient()
+		mcpClient.SetAPIKey(config.QwenKey, config.CustomAPIURL, config.CustomModelName)
 		if config.CustomAPIURL != "" || config.CustomModelName != "" {
 			log.Printf("🤖 [%s] 使用阿里云Qwen AI (自定义URL: %s, 模型: %s)", config.Name, config.CustomAPIURL, config.CustomModelName)
 		} else {
@@ -143,7 +150,8 @@ func NewAutoTrader(config AutoTraderConfig, database interface{}, userID string)
 		}
 	} else {
 		// 默认使用DeepSeek (支持自定义URL和Model)
-		mcpClient.SetDeepSeekAPIKey(config.DeepSeekKey, config.CustomAPIURL, config.CustomModelName)
+		mcpClient = mcp.NewDeepSeekClient()
+		mcpClient.SetAPIKey(config.DeepSeekKey, config.CustomAPIURL, config.CustomModelName)
 		if config.CustomAPIURL != "" || config.CustomModelName != "" {
 			log.Printf("🤖 [%s] 使用DeepSeek AI (自定义URL: %s, 模型: %s)", config.Name, config.CustomAPIURL, config.CustomModelName)
 		} else {
@@ -187,6 +195,29 @@ func NewAutoTrader(config AutoTraderConfig, database interface{}, userID string)
 		trader, err = NewAsterTrader(config.AsterUser, config.AsterSigner, config.AsterPrivateKey)
 		if err != nil {
 			return nil, fmt.Errorf("初始化Aster交易器失败: %w", err)
+		}
+	case "lighter":
+		log.Printf("🏦 [%s] 使用LIGHTER交易", config.Name)
+
+		// 優先使用 V2（需要 API Key）
+		if config.LighterAPIKeyPrivateKey != "" {
+			log.Printf("✓ 使用 LIGHTER SDK (V2) - 完整簽名支持")
+			trader, err = NewLighterTraderV2(
+				config.LighterPrivateKey,
+				config.LighterWalletAddr,
+				config.LighterAPIKeyPrivateKey,
+				config.LighterTestnet,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("初始化LIGHTER交易器(V2)失败: %w", err)
+			}
+		} else {
+			// 降級使用 V1（基本HTTP實現）
+			log.Printf("⚠️  使用 LIGHTER 基本實現 (V1) - 功能受限，請配置 API Key")
+			trader, err = NewLighterTrader(config.LighterPrivateKey, config.LighterWalletAddr, config.LighterTestnet)
+			if err != nil {
+				return nil, fmt.Errorf("初始化LIGHTER交易器(V1)失败: %w", err)
+			}
 		}
 	default:
 		return nil, fmt.Errorf("不支持的交易平台: %s", config.Exchange)
@@ -286,101 +317,6 @@ func (at *AutoTrader) Stop() {
 	log.Println("⏹ 自动交易系统停止")
 }
 
-// autoSyncBalanceIfNeeded 自动同步余额（每10分钟检查一次，变化>5%才更新）
-func (at *AutoTrader) autoSyncBalanceIfNeeded() {
-	// 距离上次同步不足10分钟，跳过
-	if time.Since(at.lastBalanceSyncTime) < 10*time.Minute {
-		return
-	}
-
-	log.Printf("🔄 [%s] 开始自动检查余额变化...", at.name)
-
-	// 查询实际余额
-	balanceInfo, err := at.trader.GetBalance()
-	if err != nil {
-		log.Printf("⚠️ [%s] 查询余额失败: %v", at.name, err)
-		at.lastBalanceSyncTime = time.Now() // 即使失败也更新时间，避免频繁重试
-		return
-	}
-
-	// 提取可用余额
-	var actualBalance float64
-	if availableBalance, ok := balanceInfo["available_balance"].(float64); ok && availableBalance > 0 {
-		actualBalance = availableBalance
-	} else if availableBalance, ok := balanceInfo["availableBalance"].(float64); ok && availableBalance > 0 {
-		actualBalance = availableBalance
-	} else if totalBalance, ok := balanceInfo["balance"].(float64); ok && totalBalance > 0 {
-		actualBalance = totalBalance
-	} else {
-		log.Printf("⚠️ [%s] 无法提取可用余额", at.name)
-		at.lastBalanceSyncTime = time.Now()
-		return
-	}
-
-	oldBalance := at.initialBalance
-
-	// 防止除以零：如果初始余额无效，直接更新为实际余额
-	if oldBalance <= 0 {
-		log.Printf("⚠️ [%s] 初始余额无效 (%.2f)，直接更新为实际余额 %.2f USDT", at.name, oldBalance, actualBalance)
-		at.initialBalance = actualBalance
-		if at.database != nil {
-			type DatabaseUpdater interface {
-				UpdateTraderInitialBalance(userID, id string, newBalance float64) error
-			}
-			if db, ok := at.database.(DatabaseUpdater); ok {
-				if err := db.UpdateTraderInitialBalance(at.userID, at.id, actualBalance); err != nil {
-					log.Printf("❌ [%s] 更新数据库失败: %v", at.name, err)
-				} else {
-					log.Printf("✅ [%s] 已自动同步余额到数据库", at.name)
-				}
-			} else {
-				log.Printf("⚠️ [%s] 数据库类型不支持UpdateTraderInitialBalance接口", at.name)
-			}
-		} else {
-			log.Printf("⚠️ [%s] 数据库引用为空，余额仅在内存中更新", at.name)
-		}
-		at.lastBalanceSyncTime = time.Now()
-		return
-	}
-
-	changePercent := ((actualBalance - oldBalance) / oldBalance) * 100
-
-	// 变化超过5%才更新
-	if math.Abs(changePercent) > 5.0 {
-		log.Printf("🔔 [%s] 检测到余额大幅变化: %.2f → %.2f USDT (%.2f%%)",
-			at.name, oldBalance, actualBalance, changePercent)
-
-		// 更新内存中的 initialBalance
-		at.initialBalance = actualBalance
-
-		// 更新数据库（需要类型断言）
-		if at.database != nil {
-			// 这里需要根据实际的数据库类型进行类型断言
-			// 由于使用了 interface{}，我们需要在 TraderManager 层面处理更新
-			// 或者在这里进行类型检查
-			type DatabaseUpdater interface {
-				UpdateTraderInitialBalance(userID, id string, newBalance float64) error
-			}
-			if db, ok := at.database.(DatabaseUpdater); ok {
-				err := db.UpdateTraderInitialBalance(at.userID, at.id, actualBalance)
-				if err != nil {
-					log.Printf("❌ [%s] 更新数据库失败: %v", at.name, err)
-				} else {
-					log.Printf("✅ [%s] 已自动同步余额到数据库", at.name)
-				}
-			} else {
-				log.Printf("⚠️ [%s] 数据库类型不支持UpdateTraderInitialBalance接口", at.name)
-			}
-		} else {
-			log.Printf("⚠️ [%s] 数据库引用为空，余额仅在内存中更新", at.name)
-		}
-	} else {
-		log.Printf("✓ [%s] 余额变化不大 (%.2f%%)，无需更新", at.name, changePercent)
-	}
-
-	at.lastBalanceSyncTime = time.Now()
-}
-
 // runCycle 运行一个交易周期（使用AI全权决策）
 func (at *AutoTrader) runCycle() error {
 	at.callCount++
@@ -426,11 +362,12 @@ func (at *AutoTrader) runCycle() error {
 
 	// 保存账户状态快照
 	record.AccountState = logger.AccountSnapshot{
-		TotalBalance:          ctx.Account.TotalEquity,
+		TotalBalance:          ctx.Account.TotalEquity - ctx.Account.UnrealizedPnL,
 		AvailableBalance:      ctx.Account.AvailableBalance,
-		TotalUnrealizedProfit: ctx.Account.TotalPnL,
+		TotalUnrealizedProfit: ctx.Account.UnrealizedPnL,
 		PositionCount:         ctx.Account.PositionCount,
 		MarginUsedPct:         ctx.Account.MarginUsedPct,
+		InitialBalance:        at.initialBalance, // 记录当时的初始余额基准
 	}
 
 	// 保存持仓快照
@@ -651,7 +588,7 @@ func (at *AutoTrader) buildTradingContext() (*decision.Context, error) {
 
 		// 获取该持仓的历史最高收益率
 		at.peakPnLCacheMutex.RLock()
-		peakPnlPct := at.peakPnLCache[symbol]
+		peakPnlPct := at.peakPnLCache[posKey]
 		at.peakPnLCacheMutex.RUnlock()
 
 		positionInfos = append(positionInfos, decision.PositionInfo{
@@ -714,6 +651,7 @@ func (at *AutoTrader) buildTradingContext() (*decision.Context, error) {
 		Account: decision.AccountInfo{
 			TotalEquity:      totalEquity,
 			AvailableBalance: availableBalance,
+			UnrealizedPnL:    totalUnrealizedProfit,
 			TotalPnL:         totalPnL,
 			TotalPnLPct:      totalPnLPct,
 			MarginUsed:       totalMarginUsed,
@@ -1306,7 +1244,7 @@ func (at *AutoTrader) GetSystemPromptTemplate() string {
 }
 
 // GetDecisionLogger 获取决策日志记录器
-func (at *AutoTrader) GetDecisionLogger() *logger.DecisionLogger {
+func (at *AutoTrader) GetDecisionLogger() logger.IDecisionLogger {
 	return at.decisionLogger
 }
 
@@ -1366,7 +1304,7 @@ func (at *AutoTrader) GetAccountInfo() (map[string]interface{}, error) {
 	}
 
 	totalMarginUsed := 0.0
-	totalUnrealizedPnL := 0.0
+	totalUnrealizedPnLCalculated := 0.0
 	for _, pos := range positions {
 		markPrice := pos["markPrice"].(float64)
 		quantity := pos["positionAmt"].(float64)
@@ -1374,7 +1312,7 @@ func (at *AutoTrader) GetAccountInfo() (map[string]interface{}, error) {
 			quantity = -quantity
 		}
 		unrealizedPnl := pos["unRealizedProfit"].(float64)
-		totalUnrealizedPnL += unrealizedPnl
+		totalUnrealizedPnLCalculated += unrealizedPnl
 
 		leverage := 10
 		if lev, ok := pos["leverage"].(float64); ok {
@@ -1384,10 +1322,19 @@ func (at *AutoTrader) GetAccountInfo() (map[string]interface{}, error) {
 		totalMarginUsed += marginUsed
 	}
 
+	// 验证未实现盈亏的一致性（API值 vs 从持仓计算）
+	diff := math.Abs(totalUnrealizedProfit - totalUnrealizedPnLCalculated)
+	if diff > 0.1 { // 允许0.01 USDT的误差
+		log.Printf("⚠️ 未实现盈亏不一致: API=%.4f, 计算=%.4f, 差异=%.4f",
+			totalUnrealizedProfit, totalUnrealizedPnLCalculated, diff)
+	}
+
 	totalPnL := totalEquity - at.initialBalance
 	totalPnLPct := 0.0
 	if at.initialBalance > 0 {
 		totalPnLPct = (totalPnL / at.initialBalance) * 100
+	} else {
+		log.Printf("⚠️ Initial Balance异常: %.2f，无法计算PNL百分比", at.initialBalance)
 	}
 
 	marginUsedPct := 0.0
@@ -1399,15 +1346,14 @@ func (at *AutoTrader) GetAccountInfo() (map[string]interface{}, error) {
 		// 核心字段
 		"total_equity":      totalEquity,           // 账户净值 = wallet + unrealized
 		"wallet_balance":    totalWalletBalance,    // 钱包余额（不含未实现盈亏）
-		"unrealized_profit": totalUnrealizedProfit, // 未实现盈亏（从API）
+		"unrealized_profit": totalUnrealizedProfit, // 未实现盈亏（交易所API官方值）
 		"available_balance": availableBalance,      // 可用余额
 
 		// 盈亏统计
-		"total_pnl":            totalPnL,           // 总盈亏 = equity - initial
-		"total_pnl_pct":        totalPnLPct,        // 总盈亏百分比
-		"total_unrealized_pnl": totalUnrealizedPnL, // 未实现盈亏（从持仓计算）
-		"initial_balance":      at.initialBalance,  // 初始余额
-		"daily_pnl":            at.dailyPnL,        // 日盈亏
+		"total_pnl":       totalPnL,          // 总盈亏 = equity - initial
+		"total_pnl_pct":   totalPnLPct,       // 总盈亏百分比
+		"initial_balance": at.initialBalance, // 初始余额
+		"daily_pnl":       at.dailyPnL,       // 日盈亏
 
 		// 持仓信息
 		"position_count":  len(positions),  // 持仓数量

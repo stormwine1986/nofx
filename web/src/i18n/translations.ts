@@ -223,6 +223,21 @@ export const translations = {
     asterUsdtWarning:
       'Important: Aster only tracks USDT balance. Please ensure you use USDT as margin currency to avoid P&L calculation errors caused by price fluctuations of other assets (BNB, ETH, etc.)',
 
+    // LIGHTER Configuration
+    lighterWalletAddress: 'L1 Wallet Address',
+    lighterPrivateKey: 'L1 Private Key',
+    lighterApiKeyPrivateKey: 'API Key Private Key',
+    enterLighterWalletAddress: 'Enter Ethereum wallet address (0x...)',
+    enterLighterPrivateKey: 'Enter L1 private key (32 bytes)',
+    enterLighterApiKeyPrivateKey: 'Enter API Key private key (40 bytes, optional)',
+    lighterWalletAddressDesc: 'Your Ethereum wallet address for account identification',
+    lighterPrivateKeyDesc: 'L1 private key for account identification (32-byte ECDSA key)',
+    lighterApiKeyPrivateKeyDesc: 'API Key private key for transaction signing (40-byte Poseidon2 key)',
+    lighterApiKeyOptionalNote: 'Without API Key, system will use limited V1 mode',
+    lighterV1Description: 'Basic Mode - Limited functionality, testing framework only',
+    lighterV2Description: 'Full Mode - Supports Poseidon2 signing and real trading',
+    lighterPrivateKeyImported: 'LIGHTER private key imported',
+
     // Exchange names
     hyperliquidExchangeName: 'Hyperliquid',
     asterExchangeName: 'Aster DEX',
@@ -474,6 +489,7 @@ export const translations = {
     registrationFailed: 'Registration failed. Please try again.',
     verificationFailed:
       'OTP verification failed. Please check the code and try again.',
+    sessionExpired: 'Session expired, please login again',
     invalidCredentials: 'Invalid email or password',
     weak: 'Weak',
     medium: 'Medium',
@@ -496,6 +512,9 @@ export const translations = {
     exitLogin: 'Sign Out',
     signIn: 'Sign In',
     signUp: 'Sign Up',
+    registrationClosed: 'Registration Closed',
+    registrationClosedMessage:
+      'User registration is currently disabled. Please contact the administrator for access.',
 
     // Hero Section
     githubStarsInDays: '2.5K+ GitHub Stars in 3 days',
@@ -1064,6 +1083,21 @@ export const translations = {
     asterUsdtWarning:
       '重要提示：Aster 仅统计 USDT 余额。请确保您使用 USDT 作为保证金币种，避免其他资产（BNB、ETH等）的价格波动导致盈亏统计错误',
 
+    // LIGHTER 配置
+    lighterWalletAddress: 'L1 錢包地址',
+    lighterPrivateKey: 'L1 私鑰',
+    lighterApiKeyPrivateKey: 'API Key 私鑰',
+    enterLighterWalletAddress: '請輸入以太坊錢包地址（0x...）',
+    enterLighterPrivateKey: '請輸入 L1 私鑰（32 字節）',
+    enterLighterApiKeyPrivateKey: '請輸入 API Key 私鑰（40 字節，可選）',
+    lighterWalletAddressDesc: '您的以太坊錢包地址，用於識別賬戶',
+    lighterPrivateKeyDesc: 'L1 私鑰用於賬戶識別（32 字節 ECDSA 私鑰）',
+    lighterApiKeyPrivateKeyDesc: 'API Key 私鑰用於簽名交易（40 字節 Poseidon2 私鑰）',
+    lighterApiKeyOptionalNote: '如果不提供 API Key，系統將使用功能受限的 V1 模式',
+    lighterV1Description: '基本模式 - 功能受限，僅用於測試框架',
+    lighterV2Description: '完整模式 - 支持 Poseidon2 簽名和真實交易',
+    lighterPrivateKeyImported: 'LIGHTER 私鑰已導入',
+
     // Exchange names
     hyperliquidExchangeName: 'Hyperliquid',
     asterExchangeName: 'Aster DEX',
@@ -1284,6 +1318,7 @@ export const translations = {
     loginFailed: '登录失败，请检查您的邮箱和密码。',
     registrationFailed: '注册失败，请重试。',
     verificationFailed: 'OTP 验证失败，请检查验证码后重试。',
+    sessionExpired: '登录已过期，请重新登录',
     invalidCredentials: '邮箱或密码错误',
     weak: '弱',
     medium: '中',
@@ -1305,6 +1340,8 @@ export const translations = {
     exitLogin: '退出登录',
     signIn: '登录',
     signUp: '注册',
+    registrationClosed: '注册已关闭',
+    registrationClosedMessage: '平台当前不开放新用户注册，如需访问请联系管理员获取账号。',
 
     // Hero Section
     githubStarsInDays: '3 天内 2.5K+ GitHub Stars',

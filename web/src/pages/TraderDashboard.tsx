@@ -93,7 +93,7 @@ export default function TraderDashboard() {
 
   // 如果在trader页面，获取该trader的数据
   const { data: status } = useSWR<SystemStatus>(
-    selectedTraderId ? `status-${selectedTraderId}` : null,
+    user && token && selectedTraderId ? `status-${selectedTraderId}` : null,
     () => api.getStatus(selectedTraderId),
     {
       refreshInterval: 15000,
@@ -103,7 +103,7 @@ export default function TraderDashboard() {
   )
 
   const { data: account } = useSWR<AccountInfo>(
-    selectedTraderId ? `account-${selectedTraderId}` : null,
+    user && token && selectedTraderId ? `account-${selectedTraderId}` : null,
     () => api.getAccount(selectedTraderId),
     {
       refreshInterval: 15000,
@@ -113,7 +113,7 @@ export default function TraderDashboard() {
   )
 
   const { data: positions } = useSWR<Position[]>(
-    selectedTraderId ? `positions-${selectedTraderId}` : null,
+    user && token && selectedTraderId ? `positions-${selectedTraderId}` : null,
     () => api.getPositions(selectedTraderId),
     {
       refreshInterval: 15000,
@@ -123,7 +123,7 @@ export default function TraderDashboard() {
   )
 
   const { data: decisions } = useSWR<DecisionRecord[]>(
-    selectedTraderId
+    user && token && selectedTraderId
       ? `decisions/latest-${selectedTraderId}-${decisionLimit}`
       : null,
     () => api.getLatestDecisions(selectedTraderId, decisionLimit),
@@ -135,7 +135,7 @@ export default function TraderDashboard() {
   )
 
   const { data: stats } = useSWR<Statistics>(
-    selectedTraderId ? `statistics-${selectedTraderId}` : null,
+    user && token && selectedTraderId ? `statistics-${selectedTraderId}` : null,
     () => api.getStatistics(selectedTraderId),
     {
       refreshInterval: 30000,
@@ -282,6 +282,8 @@ export default function TraderDashboard() {
     )
   }
 
+  const highlightColor = '#60a5fa'
+
   return (
     <div>
       {/* Trader Header */}
@@ -346,7 +348,7 @@ export default function TraderDashboard() {
               style={{
                 color: selectedTrader.ai_model.includes('qwen')
                   ? '#c084fc'
-                  : '#60a5fa',
+                  : highlightColor,
               }}
             >
               {getModelDisplayName(
@@ -354,6 +356,10 @@ export default function TraderDashboard() {
                   selectedTrader.ai_model
               )}
             </span>
+          </span>
+          <span>•</span>
+          <span>
+            Prompt: <span className="font-semibold" style={{ color: highlightColor }}>{selectedTrader.system_prompt_template || '-'}</span>
           </span>
           {status && (
             <>

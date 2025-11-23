@@ -63,8 +63,10 @@ export function TwoStageKeyModal({
   const stage1Ref = useRef<HTMLInputElement>(null)
   const stage2Ref = useRef<HTMLInputElement>(null)
 
-  const expectedPart1Length = Math.ceil(expectedLength / 2)
-  const expectedPart2Length = expectedLength - expectedPart1Length
+  // UX improvement: Use 58 + 6 split (most of the key + last 6 chars)
+  // Advantage: Second stage only requires entering 6 characters, much easier to count
+  const expectedPart1Length = expectedLength - 6  // 64 - 6 = 58
+  const expectedPart2Length = 6  // Last 6 characters
 
   useEffect(() => {
     if (isOpen && stage === 1 && stage1Ref.current) {
@@ -227,7 +229,10 @@ export function TwoStageKeyModal({
               <div className="flex gap-3">
                 <button
                   onClick={handleStage1Next}
-                  disabled={part1.length < expectedPart1Length || processing}
+                  disabled={
+                    (part1.startsWith('0x') ? part1.slice(2) : part1).length <
+                      expectedPart1Length || processing
+                  }
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
                 >
                   {processing
@@ -298,7 +303,10 @@ export function TwoStageKeyModal({
               <div className="flex gap-3">
                 <button
                   onClick={handleStage2Complete}
-                  disabled={part2.length < expectedPart2Length}
+                  disabled={
+                    (part2.startsWith('0x') ? part2.slice(2) : part2).length <
+                    expectedPart2Length
+                  }
                   className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
                 >
                   🔒 {t('twoStageKey.encryptButton', language)}

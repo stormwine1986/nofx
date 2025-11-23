@@ -16,11 +16,10 @@ export interface SystemStatus {
 export interface AccountInfo {
   total_equity: number
   wallet_balance: number
-  unrealized_profit: number
+  unrealized_profit: number // 未实现盈亏（交易所API官方值）
   available_balance: number
   total_pnl: number
   total_pnl_pct: number
-  total_unrealized_pnl: number
   initial_balance: number
   daily_pnl: number
   position_count: number
@@ -94,6 +93,7 @@ export interface TraderInfo {
   custom_prompt?: string
   use_coin_pool?: boolean
   use_oi_top?: boolean
+  system_prompt_template?: string
 }
 
 export interface AIModel {
@@ -120,13 +120,17 @@ export interface Exchange {
   asterUser?: string
   asterSigner?: string
   asterPrivateKey?: string
+  // LIGHTER 特定字段
+  lighterWalletAddr?: string
+  lighterPrivateKey?: string
+  lighterApiKeyPrivateKey?: string
 }
 
 export interface CreateTraderRequest {
   name: string
   ai_model_id: string
   exchange_id: string
-  initial_balance: number
+  initial_balance?: number // 可选：创建时由后端自动获取，编辑时可手动更新
   scan_interval_minutes?: number
   btc_eth_leverage?: number
   altcoin_leverage?: number
@@ -163,6 +167,10 @@ export interface UpdateExchangeConfigRequest {
       aster_user?: string
       aster_signer?: string
       aster_private_key?: string
+      // LIGHTER 特定字段
+      lighter_wallet_addr?: string
+      lighter_private_key?: string
+      lighter_api_key_private_key?: string
     }
   }
 }
