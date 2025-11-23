@@ -46,9 +46,9 @@ type LighterTraderV2 struct {
 	accountIndex     int64  // 賬戶索引
 
 	// 認證令牌
-	authToken     string
-	tokenExpiry   time.Time
-	accountMutex  sync.RWMutex
+	authToken    string
+	tokenExpiry  time.Time
+	accountMutex sync.RWMutex
 
 	// 市場信息緩存
 	symbolPrecision map[string]SymbolPrecision
@@ -276,4 +276,9 @@ func (t *LighterTraderV2) GetExchangeType() string {
 func (t *LighterTraderV2) Cleanup() error {
 	log.Println("⏹  LIGHTER 交易器清理完成")
 	return nil
+}
+
+func (t *LighterTraderV2) GetHistoryFilledOrders() ([]map[string]interface{}, error) {
+	// TODO
+	return nil, nil
 }
